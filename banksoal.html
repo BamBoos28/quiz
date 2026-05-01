@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bank Soal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="min-h-screen" data-page="bank">
+  <main class="mx-auto max-w-md px-3 py-3 pb-8">
+    <header class="card-shell pastel-peach px-3 py-3">
+      <p class="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-600">Editor</p>
+      <h1 class="mt-1 text-lg font-extrabold text-slate-900">Bank Soal</h1>
+      <p class="mt-1 text-sm text-slate-700">
+        Format bisa satu objek atau array objek. Data akan disimpan ke localStorage.
+      </p>
+    </header>
+
+    <section class="mt-4 space-y-3">
+      <div class="card-shell pastel-blue p-3">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <h2 class="text-sm font-extrabold text-slate-900">Quiz 1</h2>
+          <span id="bank-status-1" class="text-[11px] font-bold text-slate-600"></span>
+        </div>
+        <textarea id="bank-1" class="bank-textarea w-full border-2 border-slate-900 bg-white p-3 text-sm outline-none" spellcheck="false"></textarea>
+        <p id="bank-error-1" class="bank-error"></p>
+      </div>
+
+      <div class="card-shell pastel-pink p-3">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <h2 class="text-sm font-extrabold text-slate-900">Quiz 2</h2>
+          <span id="bank-status-2" class="text-[11px] font-bold text-slate-600"></span>
+        </div>
+        <textarea id="bank-2" class="bank-textarea w-full border-2 border-slate-900 bg-white p-3 text-sm outline-none" spellcheck="false"></textarea>
+        <p id="bank-error-2" class="bank-error"></p>
+      </div>
+
+      <div class="card-shell pastel-green p-3">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <h2 class="text-sm font-extrabold text-slate-900">Quiz 3</h2>
+          <span id="bank-status-3" class="text-[11px] font-bold text-slate-600"></span>
+        </div>
+        <textarea id="bank-3" class="bank-textarea w-full border-2 border-slate-900 bg-white p-3 text-sm outline-none" spellcheck="false"></textarea>
+        <p id="bank-error-3" class="bank-error"></p>
+      </div>
+
+      <div class="card-shell pastel-yellow p-3">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <h2 class="text-sm font-extrabold text-slate-900">Quiz 4</h2>
+          <span id="bank-status-4" class="text-[11px] font-bold text-slate-600"></span>
+        </div>
+        <textarea id="bank-4" class="bank-textarea w-full border-2 border-slate-900 bg-white p-3 text-sm outline-none" spellcheck="false"></textarea>
+        <p id="bank-error-4" class="bank-error"></p>
+      </div>
+
+      <div class="card-shell pastel-lilac p-3">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <h2 class="text-sm font-extrabold text-slate-900">Quiz 5</h2>
+          <span id="bank-status-5" class="text-[11px] font-bold text-slate-600"></span>
+        </div>
+        <textarea id="bank-5" class="bank-textarea w-full border-2 border-slate-900 bg-white p-3 text-sm outline-none" spellcheck="false"></textarea>
+        <p id="bank-error-5" class="bank-error"></p>
+      </div>
+
+      <div class="card-shell pastel-mint p-3">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <h2 class="text-sm font-extrabold text-slate-900">Quiz 6</h2>
+          <span id="bank-status-6" class="text-[11px] font-bold text-slate-600"></span>
+        </div>
+        <textarea id="bank-6" class="bank-textarea w-full border-2 border-slate-900 bg-white p-3 text-sm outline-none" spellcheck="false"></textarea>
+        <p id="bank-error-6" class="bank-error"></p>
+      </div>
+    </section>
+
+    <section class="mt-4 space-y-2">
+      <button id="saveAllBtn" type="button" class="solid-btn w-full">Simpan Semua</button>
+      <p id="bankGlobalStatus" class="text-center text-sm font-semibold text-slate-700"></p>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

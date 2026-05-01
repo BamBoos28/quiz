@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quiz 5</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="min-h-screen" data-page="quiz" data-quiz="5">
+  <main class="mx-auto max-w-md px-3 py-3 pb-8">
+    <header class="sticky top-2 z-20 card-shell pastel-cream px-3 py-3">
+      <div class="flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          <p class="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-600">Compact Quiz</p>
+          <h1 id="quizTitle" class="truncate text-lg font-extrabold text-slate-900">Quiz 5</h1>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <div class="text-right leading-tight">
+            <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-600">Score</p>
+            <p id="scoreText" class="text-sm font-extrabold text-slate-900">0 / 0</p>
+          </div>
+
+          <button id="resetBtn" type="button" class="icon-btn" title="Ulang">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5a7 7 0 1 1-6.32 4H3l3.5-3.5L10 9H7.95A5 5 0 1 0 12 7c-1.07 0-2.07.34-2.88.92L7.72 6.5A7 7 0 0 1 12 5Zm6 3h3L17.5 11.5 14 8h2.05A5 5 0 0 0 12 17a5 5 0 0 0 4.88-6.12l1.8-.55A7 7 0 0 1 18 8Z" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <section id="quizContainer" class="mt-3 space-y-3"></section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
