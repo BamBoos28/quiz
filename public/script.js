@@ -78,32 +78,44 @@ function saveQuizBank(quizIndex, rawValue, onSuccess, onError) {
   }
 }
 
-function createState(total) {
+function createState(bank) {
   return {
-    order: shuffle([...Array(total).keys()]),
-    answers: Array.from({ length: total }, () => null),
+    order: shuffle([...Array(bank.length).keys()]),
+    answerOrders: bank.map((q) => shuffle([...Array(q.jawaban.length).keys()])),
+    answers: Array.from({ length: bank.length }, () => null),
   };
 }
 
-function loadState(quizIndex, total) {
+function isValidStateShape(state, bank) {
+  if (!state) return false;
+  if (!Array.isArray(state.order)) return false;
+  if (!Array.isArray(state.answerOrders)) return false;
+  if (!Array.isArray(state.answers)) return false;
+  if (state.order.length !== bank.length) return false;
+  if (state.answerOrders.length !== bank.length) return false;
+  if (state.answers.length !== bank.length) return false;
+
+  for (let i = 0; i < bank.length; i++) {
+    if (!Array.isArray(state.answerOrders[i])) return false;
+    if (state.answerOrders[i].length !== bank[i].jawaban.length) return false;
+  }
+
+  return true;
+}
+
+function loadState(quizIndex, bank) {
   try {
     const raw = localStorage.getItem(`${STATE_PREFIX}${quizIndex}`);
-    if (!raw) return createState(total);
+    if (!raw) return createState(bank);
 
     const parsed = JSON.parse(raw);
-    if (
-      !parsed ||
-      !Array.isArray(parsed.order) ||
-      !Array.isArray(parsed.answers) ||
-      parsed.order.length !== total ||
-      parsed.answers.length !== total
-    ) {
-      return createState(total);
+    if (!isValidStateShape(parsed, bank)) {
+      return createState(bank);
     }
 
     return parsed;
   } catch {
-    return createState(total);
+    return createState(bank);
   }
 }
 
@@ -138,7 +150,7 @@ function initQuizPage() {
 
   quizTitle.textContent = `Quiz ${quizIndex}`;
 
-  const bank = readQuizBank(quizIndex);
+  let bank = readQuizBank(quizIndex);
 
   if (!bank.length) {
     scoreText.textContent = "0 / 0";
@@ -155,7 +167,7 @@ function initQuizPage() {
     return;
   }
 
-  let state = loadState(quizIndex, bank.length);
+  let state = loadState(quizIndex, bank);
 
   function render() {
     scoreText.textContent = `${getScore(state)} / ${bank.length}`;
@@ -164,6 +176,7 @@ function initQuizPage() {
     state.order.forEach((bankIndex, renderIndex) => {
       const question = bank[bankIndex];
       const answerState = state.answers[renderIndex];
+      const answerOrder = state.answerOrders[bankIndex] || [...Array(question.jawaban.length).keys()];
 
       const article = document.createElement("article");
       article.className = "card-shell pastel-cream p-3";
@@ -180,9 +193,10 @@ function initQuizPage() {
         <div class="mt-2 hidden result-box text-sm" data-role="result"></div>
 
         <div class="mt-3 grid grid-cols-2 gap-2">
-          ${question.jawaban
-            .map(
-              (answer, optionIndex) => `
+          ${answerOrder
+            .map((optionIndex) => {
+              const answer = question.jawaban[optionIndex];
+              return `
                 <button
                   type="button"
                   class="answer-btn text-sm"
@@ -190,8 +204,8 @@ function initQuizPage() {
                 >
                   ${escapeHtml(answer)}
                 </button>
-              `
-            )
+              `;
+            })
             .join("")}
         </div>
       `;
@@ -242,7 +256,7 @@ function initQuizPage() {
   }
 
   resetBtn.addEventListener("click", () => {
-    state = createState(bank.length);
+    state = createState(bank);
     saveState(quizIndex, state);
     render();
   });
@@ -304,6 +318,7 @@ function initBankPage() {
     globalStatus.textContent = errorCount
       ? `Ada ${errorCount} bank soal yang belum valid.`
       : "Semua bank soal berhasil disimpan.";
+
     globalStatus.className = errorCount
       ? "text-center text-sm font-semibold text-rose-700"
       : "text-center text-sm font-semibold text-emerald-700";

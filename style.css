@@ -112,13 +112,16 @@ textarea, button, input {
 }
 
 .answer-btn.correct {
-  background: #dff7e5;
+  background: #77dd77; /* Pastel hijau cerah */
+  color: white;
+  border: 2px solid #66cc66;
 }
 
 .answer-btn.wrong {
-  background: #ffe3e6;
+  background: #ffb7b2; /* Pastel merah cerah */
+  color: white;
+  border: 2px solid #ff9999;
 }
-
 .answer-btn:disabled {
   cursor: not-allowed;
   opacity: 0.98;
