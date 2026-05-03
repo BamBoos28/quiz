@@ -16,18 +16,44 @@
           <h1 id="quizTitle" class="truncate text-lg font-extrabold text-slate-900">Quiz 3</h1>
         </div>
 
-        <div class="flex items-center gap-2">
-          <div class="text-right leading-tight">
-            <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-600">Score</p>
-            <p id="scoreText" class="text-sm font-extrabold text-slate-900">0 / 0</p>
-          </div>
+          <div class="flex items-center gap-2">
+            <div class="text-right leading-tight">
+              <p
+                class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-600"
+              >
+                Score
+              </p>
+              <p id="scoreText" class="text-sm font-extrabold text-slate-900">
+                0 / 0
+              </p>
+            </div>
 
-          <button id="resetBtn" type="button" class="icon-btn" title="Ulang">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 5a7 7 0 1 1-6.32 4H3l3.5-3.5L10 9H7.95A5 5 0 1 0 12 7c-1.07 0-2.07.34-2.88.92L7.72 6.5A7 7 0 0 1 12 5Zm6 3h3L17.5 11.5 14 8h2.05A5 5 0 0 0 12 17a5 5 0 0 0 4.88-6.12l1.8-.55A7 7 0 0 1 18 8Z" fill="currentColor"/>
-            </svg>
-          </button>
-        </div>
+            <div class="text-right leading-tight">
+              <p
+                class="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-600"
+              >
+                Timer
+              </p>
+              <p id="timerText" class="text-sm font-extrabold text-slate-900">
+                00:00
+              </p>
+            </div>
+
+            <button id="pauseBtn" type="button" class="icon-btn" title="Pause">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M8 5h3v14H8V5Zm5 0h3v14h-3V5Z" fill="currentColor" />
+              </svg>
+            </button>
+
+            <button id="resetBtn" type="button" class="icon-btn" title="Ulang">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M12 5a7 7 0 1 1-6.32 4H3l3.5-3.5L10 9H7.95A5 5 0 1 0 12 7c-1.07 0-2.07.34-2.88.92L7.72 6.5A7 7 0 0 1 12 5Zm6 3h3L17.5 11.5 14 8h2.05A5 5 0 0 0 12 17a5 5 0 0 0 4.88-6.12l1.8-.55A7 7 0 0 1 18 8Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </button>
+          </div>
       </div>
     </header>
 
