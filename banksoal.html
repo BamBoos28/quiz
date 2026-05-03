@@ -9,12 +9,16 @@
 </head>
 <body class="min-h-screen" data-page="bank">
   <main class="mx-auto max-w-md px-3 py-3 pb-8">
-    <header class="card-shell pastel-peach px-3 py-3">
-      <p class="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-600">Editor</p>
+    <header class="sticky top-0 card-shell pastel-peach px-3 py-3">
       <h1 class="mt-1 text-lg font-extrabold text-slate-900">Bank Soal</h1>
       <p class="mt-1 text-sm text-slate-700">
         Format bisa satu objek atau array objek. Data akan disimpan ke localStorage.
       </p>
+
+          <section class="mt-4 space-y-2">
+      <button id="saveAllBtn" type="button" class="solid-btn w-full">Simpan Semua</button>
+      <p id="bankGlobalStatus" class="text-center text-sm font-semibold text-slate-700"></p>
+    </section>
     </header>
 
     <section class="mt-4 space-y-3">
@@ -73,10 +77,7 @@
       </div>
     </section>
 
-    <section class="mt-4 space-y-2">
-      <button id="saveAllBtn" type="button" class="solid-btn w-full">Simpan Semua</button>
-      <p id="bankGlobalStatus" class="text-center text-sm font-semibold text-slate-700"></p>
-    </section>
+
   </main>
 
   <script src="/script.js"></script>
