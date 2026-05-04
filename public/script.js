@@ -1,6 +1,7 @@
 const QUIZ_COUNT = 6;
 const BANK_PREFIX = "compactQuiz_bank_";
 const STATE_PREFIX = "compactQuiz_state_";
+const TIMER_PREFIX = "compactQuiz_timer_";
 
 function escapeHtml(value) {
   return String(value)
@@ -20,9 +21,11 @@ function shuffle(arr) {
   return copy;
 }
 
-function getDisplayCount(total) {
-  if (total <= 0) return 0;
-  return Math.max(1, Math.floor(total * 0.8));
+function formatTime(totalSeconds) {
+  const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+  const minutes = Math.floor(safeSeconds / 60);
+  const seconds = safeSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 function normalizeQuestion(item) {
@@ -56,9 +59,7 @@ function readQuizBank(quizIndex) {
   try {
     const parsed = JSON.parse(raw);
     const items = Array.isArray(parsed) ? parsed : [parsed];
-    return items
-      .map(normalizeQuestion)
-      .filter((q) => q.soal && q.jawaban.length >= 2);
+    return items.map(normalizeQuestion).filter((q) => q.soal && q.jawaban.length >= 2);
   } catch {
     return [];
   }
@@ -85,102 +86,26 @@ function saveQuizBank(quizIndex, rawValue, onSuccess, onError) {
   }
 }
 
-function formatTime(totalSeconds) {
-  const safe = Math.max(0, Math.floor(Number(totalSeconds) || 0));
-  const mm = String(Math.floor(safe / 60)).padStart(2, "0");
-  const ss = String(safe % 60).padStart(2, "0");
-  return `${mm}:${ss}`;
-}
-
-function normalizeTimer(timer) {
-  const elapsed = Math.max(0, Math.floor(Number(timer?.elapsed ?? 0)));
-  const running = Boolean(timer?.running ?? true);
-  const startedAtRaw = Number(timer?.startedAt ?? Date.now());
-
-  return {
-    elapsed,
-    running,
-    startedAt: running && Number.isFinite(startedAtRaw) ? startedAtRaw : null,
-  };
-}
-
-function getTimerElapsed(timer) {
-  const elapsed = Math.max(0, Math.floor(Number(timer?.elapsed ?? 0)));
-
-  if (timer?.running && Number.isFinite(Number(timer?.startedAt))) {
-    return elapsed + Math.max(0, Math.floor((Date.now() - Number(timer.startedAt)) / 1000));
-  }
-
-  return elapsed;
-}
-
 function createState(bank) {
-  const total = bank.length;
-  const displayCount = getDisplayCount(total);
-
-  if (!total || !displayCount) {
-    return {
-      order: [],
-      optionOrders: [],
-      answers: [],
-      timer: {
-        elapsed: 0,
-        running: true,
-        startedAt: Date.now(),
-      },
-    };
-  }
-
-  const order = shuffle([...Array(total).keys()]).slice(0, displayCount);
-
-  const optionOrders = order.map((bankIndex) => {
-    const answerCount = bank[bankIndex].jawaban.length;
-    return shuffle([...Array(answerCount).keys()]);
-  });
-
   return {
-    order,
-    optionOrders,
-    answers: Array.from({ length: displayCount }, () => null),
-    timer: {
-      elapsed: 0,
-      running: true,
-      startedAt: Date.now(),
-    },
+    order: shuffle([...Array(bank.length).keys()]),
+    answerOrders: bank.map((q) => shuffle([...Array(q.jawaban.length).keys()])),
+    answers: Array.from({ length: bank.length }, () => null),
   };
 }
 
-function isValidSavedState(state, bank) {
-  const displayCount = getDisplayCount(bank.length);
-
+function isValidStateShape(state, bank) {
   if (!state) return false;
   if (!Array.isArray(state.order)) return false;
-  if (!Array.isArray(state.optionOrders)) return false;
+  if (!Array.isArray(state.answerOrders)) return false;
   if (!Array.isArray(state.answers)) return false;
-  if (state.order.length !== displayCount) return false;
-  if (state.optionOrders.length !== displayCount) return false;
-  if (state.answers.length !== displayCount) return false;
+  if (state.order.length !== bank.length) return false;
+  if (state.answerOrders.length !== bank.length) return false;
+  if (state.answers.length !== bank.length) return false;
 
-  for (let i = 0; i < state.order.length; i++) {
-    const bankIndex = state.order[i];
-    if (
-      typeof bankIndex !== "number" ||
-      bankIndex < 0 ||
-      bankIndex >= bank.length
-    ) {
-      return false;
-    }
-
-    const q = bank[bankIndex];
-    const optionOrder = state.optionOrders[i];
-
-    if (!Array.isArray(optionOrder)) return false;
-    if (optionOrder.length !== q.jawaban.length) return false;
-
-    const sorted = [...optionOrder].sort((a, b) => a - b);
-    for (let j = 0; j < sorted.length; j++) {
-      if (sorted[j] !== j) return false;
-    }
+  for (let i = 0; i < bank.length; i++) {
+    if (!Array.isArray(state.answerOrders[i])) return false;
+    if (state.answerOrders[i].length !== bank[i].jawaban.length) return false;
   }
 
   return true;
@@ -192,14 +117,11 @@ function loadState(quizIndex, bank) {
     if (!raw) return createState(bank);
 
     const parsed = JSON.parse(raw);
-    if (!isValidSavedState(parsed, bank)) {
+    if (!isValidStateShape(parsed, bank)) {
       return createState(bank);
     }
 
-    return {
-      ...parsed,
-      timer: normalizeTimer(parsed.timer),
-    };
+    return parsed;
   } catch {
     return createState(bank);
   }
@@ -227,33 +149,75 @@ function makeStarterText() {
   );
 }
 
-function pauseTimer(state) {
-  if (!state.timer.running) return;
-  state.timer.elapsed = getTimerElapsed(state.timer);
-  state.timer.running = false;
-  state.timer.startedAt = null;
+function createTimerState() {
+  return {
+    elapsed: 0,
+    running: true,
+    startedAt: Date.now(),
+  };
 }
 
-function resumeTimer(state) {
-  if (state.timer.running) return;
-  state.timer.running = true;
-  state.timer.startedAt = Date.now();
+function normalizeTimerState(raw) {
+  if (!raw || typeof raw !== "object") return createTimerState();
+
+  const elapsed = Number(raw.elapsed ?? 0);
+  const running = Boolean(raw.running ?? true);
+  const startedAt = Number(raw.startedAt ?? Date.now());
+
+  return {
+    elapsed: Number.isFinite(elapsed) && elapsed >= 0 ? Math.floor(elapsed) : 0,
+    running,
+    startedAt: running && Number.isFinite(startedAt) ? startedAt : Date.now(),
+  };
 }
 
-function getPauseIcon(running) {
-  if (running) {
-    return `
+function loadTimerState(quizIndex) {
+  try {
+    const raw = localStorage.getItem(`${TIMER_PREFIX}${quizIndex}`);
+    if (!raw) return createTimerState();
+
+    const parsed = normalizeTimerState(JSON.parse(raw));
+    return parsed;
+  } catch {
+    return createTimerState();
+  }
+}
+
+function saveTimerState(quizIndex, timerState) {
+  localStorage.setItem(`${TIMER_PREFIX}${quizIndex}`, JSON.stringify(timerState));
+}
+
+function getElapsedSeconds(timerState) {
+  if (!timerState.running) return timerState.elapsed;
+  return timerState.elapsed + Math.floor((Date.now() - timerState.startedAt) / 1000);
+}
+
+function syncTimerToNow(timerState) {
+  if (timerState.running) {
+    timerState.elapsed = getElapsedSeconds(timerState);
+    timerState.startedAt = Date.now();
+  }
+  return timerState;
+}
+
+function setPauseButtonIcon(pauseBtn, isPaused) {
+  if (!pauseBtn) return;
+
+  if (isPaused) {
+    pauseBtn.title = "Resume";
+    pauseBtn.innerHTML = `
       <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M8 5h3v14H8V5Zm5 0h3v14h-3V5Z" fill="currentColor"/>
+        <path d="M8 5v14l11-7-11-7Z" fill="currentColor" />
+      </svg>
+    `;
+  } else {
+    pauseBtn.title = "Pause";
+    pauseBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M8 5h3v14H8V5Zm5 0h3v14h-3V5Z" fill="currentColor" />
       </svg>
     `;
   }
-
-  return `
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M8 5v14l11-7L8 5Z" fill="currentColor"/>
-    </svg>
-  `;
 }
 
 function initQuizPage() {
@@ -267,11 +231,47 @@ function initQuizPage() {
 
   quizTitle.textContent = `Quiz ${quizIndex}`;
 
-  const bank = readQuizBank(quizIndex);
+  let bank = readQuizBank(quizIndex);
+  let timerState = loadTimerState(quizIndex);
+  let timerInterval = null;
+
+  function updateTimerUI() {
+    if (!timerText) return;
+    timerText.textContent = formatTime(getElapsedSeconds(timerState));
+  }
+
+  function startTimerLoop() {
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      if (timerState.running) {
+        updateTimerUI();
+        saveTimerState(quizIndex, timerState);
+      }
+    }, 1000);
+  }
+
+  function pauseTimer() {
+    if (!timerState.running) return;
+    syncTimerToNow(timerState);
+    timerState.running = false;
+    timerState.startedAt = null;
+    saveTimerState(quizIndex, timerState);
+    updateTimerUI();
+    setPauseButtonIcon(pauseBtn, true);
+  }
+
+  function resumeTimer() {
+    if (timerState.running) return;
+    timerState.running = true;
+    timerState.startedAt = Date.now();
+    saveTimerState(quizIndex, timerState);
+    updateTimerUI();
+    setPauseButtonIcon(pauseBtn, false);
+  }
 
   if (!bank.length) {
     scoreText.textContent = "0 / 0";
-    timerText.textContent = "00:00";
+    if (timerText) timerText.textContent = "00:00";
     container.innerHTML = `
       <div class="card-shell pastel-peach p-4">
         <p class="text-sm font-bold text-slate-900">Belum ada soal tersimpan.</p>
@@ -282,28 +282,21 @@ function initQuizPage() {
       </div>
     `;
     resetBtn.disabled = true;
-    pauseBtn.disabled = true;
+    if (pauseBtn) pauseBtn.disabled = true;
     return;
   }
 
   let state = loadState(quizIndex, bank);
-  saveState(quizIndex, state);
-
-  function updateHeader() {
-    const totalSoal = state.order.length;
-    scoreText.textContent = `${getScore(state)} / ${totalSoal}`;
-    timerText.textContent = formatTime(getTimerElapsed(state.timer));
-    pauseBtn.innerHTML = getPauseIcon(state.timer.running);
-    pauseBtn.title = state.timer.running ? "Pause" : "Lanjutkan";
-  }
 
   function render() {
+    scoreText.textContent = `${getScore(state)} / ${bank.length}`;
     container.innerHTML = "";
 
     state.order.forEach((bankIndex, renderIndex) => {
       const question = bank[bankIndex];
       const answerState = state.answers[renderIndex];
-      const optionOrder = state.optionOrders[renderIndex] || [];
+      const answerOrder =
+        state.answerOrders[bankIndex] || [...Array(question.jawaban.length).keys()];
 
       const article = document.createElement("article");
       article.className = "card-shell pastel-cream p-3";
@@ -320,16 +313,16 @@ function initQuizPage() {
         <div class="mt-2 hidden result-box text-sm" data-role="result"></div>
 
         <div class="mt-3 grid grid-cols-2 gap-2">
-          ${optionOrder
-            .map((answerIndex) => {
-              const answerText = question.jawaban[answerIndex];
+          ${answerOrder
+            .map((optionIndex) => {
+              const answer = question.jawaban[optionIndex];
               return `
                 <button
                   type="button"
                   class="answer-btn text-sm"
-                  data-answer-index="${answerIndex}"
+                  data-option="${optionIndex}"
                 >
-                  ${escapeHtml(answerText)}
+                  ${escapeHtml(answer)}
                 </button>
               `;
             })
@@ -338,7 +331,7 @@ function initQuizPage() {
       `;
 
       const resultEl = article.querySelector('[data-role="result"]');
-      const buttons = [...article.querySelectorAll("[data-answer-index]")];
+      const buttons = [...article.querySelectorAll("[data-option]")];
 
       if (answerState) {
         resultEl.classList.remove("hidden");
@@ -350,8 +343,7 @@ function initQuizPage() {
         `;
 
         buttons.forEach((btn) => {
-          const answerIndex = Number(btn.dataset.answerIndex);
-          const optionText = question.jawaban[answerIndex];
+          const optionText = question.jawaban[Number(btn.dataset.option)];
           btn.disabled = true;
 
           if (optionText === question.jawaban_benar) {
@@ -370,8 +362,7 @@ function initQuizPage() {
         btn.addEventListener("click", () => {
           if (state.answers[renderIndex]) return;
 
-          const answerIndex = Number(btn.dataset.answerIndex);
-          const selected = question.jawaban[answerIndex];
+          const selected = question.jawaban[Number(btn.dataset.option)];
           const correct = selected === question.jawaban_benar;
 
           state.answers[renderIndex] = { selected, correct };
@@ -382,34 +373,44 @@ function initQuizPage() {
 
       container.appendChild(article);
     });
-
-    updateHeader();
   }
 
-  pauseBtn.addEventListener("click", () => {
-    if (state.timer.running) {
-      pauseTimer(state);
-    } else {
-      resumeTimer(state);
-    }
+  if (pauseBtn) {
+    setPauseButtonIcon(pauseBtn, !timerState.running);
 
-    saveState(quizIndex, state);
-    updateHeader();
-  });
+    pauseBtn.addEventListener("click", () => {
+      if (timerState.running) {
+        pauseTimer();
+      } else {
+        resumeTimer();
+      }
+    });
+  }
 
   resetBtn.addEventListener("click", () => {
     state = createState(bank);
+
+    timerState = createTimerState();
     saveState(quizIndex, state);
+    saveTimerState(quizIndex, timerState);
+
     render();
+    updateTimerUI();
+    setPauseButtonIcon(pauseBtn, false);
   });
 
+  updateTimerUI();
+  startTimerLoop();
   render();
 
-  setInterval(() => {
-    if (state.timer.running) {
-      timerText.textContent = formatTime(getTimerElapsed(state.timer));
-    }
-  }, 1000);
+  window.addEventListener("beforeunload", () => {
+    saveState(quizIndex, state);
+    saveTimerState(quizIndex, timerState);
+  });
+  window.addEventListener("pagehide", () => {
+    saveState(quizIndex, state);
+    saveTimerState(quizIndex, timerState);
+  });
 }
 
 function initBankPage() {
