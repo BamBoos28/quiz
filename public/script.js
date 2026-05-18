@@ -1,7 +1,6 @@
 const QUIZ_COUNT = 6;
 const BANK_PREFIX = "compactQuiz_bank_";
 const STATE_PREFIX = "compactQuiz_state_";
-const TIMER_PREFIX = "compactQuiz_timer_";
 
 function escapeHtml(value) {
   return String(value)
@@ -19,13 +18,6 @@ function shuffle(arr) {
     [copy[i], copy[j]] = [copy[j], copy[i]];
   }
   return copy;
-}
-
-function formatTime(totalSeconds) {
-  const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
-  const minutes = Math.floor(safeSeconds / 60);
-  const seconds = safeSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 function normalizeQuestion(item) {
@@ -149,129 +141,19 @@ function makeStarterText() {
   );
 }
 
-function createTimerState() {
-  return {
-    elapsed: 0,
-    running: true,
-    startedAt: Date.now(),
-  };
-}
-
-function normalizeTimerState(raw) {
-  if (!raw || typeof raw !== "object") return createTimerState();
-
-  const elapsed = Number(raw.elapsed ?? 0);
-  const running = Boolean(raw.running ?? true);
-  const startedAt = Number(raw.startedAt ?? Date.now());
-
-  return {
-    elapsed: Number.isFinite(elapsed) && elapsed >= 0 ? Math.floor(elapsed) : 0,
-    running,
-    startedAt: running && Number.isFinite(startedAt) ? startedAt : Date.now(),
-  };
-}
-
-function loadTimerState(quizIndex) {
-  try {
-    const raw = localStorage.getItem(`${TIMER_PREFIX}${quizIndex}`);
-    if (!raw) return createTimerState();
-
-    const parsed = normalizeTimerState(JSON.parse(raw));
-    return parsed;
-  } catch {
-    return createTimerState();
-  }
-}
-
-function saveTimerState(quizIndex, timerState) {
-  localStorage.setItem(`${TIMER_PREFIX}${quizIndex}`, JSON.stringify(timerState));
-}
-
-function getElapsedSeconds(timerState) {
-  if (!timerState.running) return timerState.elapsed;
-  return timerState.elapsed + Math.floor((Date.now() - timerState.startedAt) / 1000);
-}
-
-function syncTimerToNow(timerState) {
-  if (timerState.running) {
-    timerState.elapsed = getElapsedSeconds(timerState);
-    timerState.startedAt = Date.now();
-  }
-  return timerState;
-}
-
-function setPauseButtonIcon(pauseBtn, isPaused) {
-  if (!pauseBtn) return;
-
-  if (isPaused) {
-    pauseBtn.title = "Resume";
-    pauseBtn.innerHTML = `
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M8 5v14l11-7-11-7Z" fill="currentColor" />
-      </svg>
-    `;
-  } else {
-    pauseBtn.title = "Pause";
-    pauseBtn.innerHTML = `
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M8 5h3v14H8V5Zm5 0h3v14h-3V5Z" fill="currentColor" />
-      </svg>
-    `;
-  }
-}
-
 function initQuizPage() {
   const quizIndex = Number(document.body.dataset.quiz || "1");
   const quizTitle = document.getElementById("quizTitle");
   const scoreText = document.getElementById("scoreText");
-  const timerText = document.getElementById("timerText");
-  const pauseBtn = document.getElementById("pauseBtn");
   const resetBtn = document.getElementById("resetBtn");
   const container = document.getElementById("quizContainer");
 
   quizTitle.textContent = `Quiz ${quizIndex}`;
 
   let bank = readQuizBank(quizIndex);
-  let timerState = loadTimerState(quizIndex);
-  let timerInterval = null;
-
-  function updateTimerUI() {
-    if (!timerText) return;
-    timerText.textContent = formatTime(getElapsedSeconds(timerState));
-  }
-
-  function startTimerLoop() {
-    if (timerInterval) clearInterval(timerInterval);
-    timerInterval = setInterval(() => {
-      if (timerState.running) {
-        updateTimerUI();
-        saveTimerState(quizIndex, timerState);
-      }
-    }, 1000);
-  }
-
-  function pauseTimer() {
-    if (!timerState.running) return;
-    syncTimerToNow(timerState);
-    timerState.running = false;
-    timerState.startedAt = null;
-    saveTimerState(quizIndex, timerState);
-    updateTimerUI();
-    setPauseButtonIcon(pauseBtn, true);
-  }
-
-  function resumeTimer() {
-    if (timerState.running) return;
-    timerState.running = true;
-    timerState.startedAt = Date.now();
-    saveTimerState(quizIndex, timerState);
-    updateTimerUI();
-    setPauseButtonIcon(pauseBtn, false);
-  }
 
   if (!bank.length) {
     scoreText.textContent = "0 / 0";
-    if (timerText) timerText.textContent = "00:00";
     container.innerHTML = `
       <div class="card-shell pastel-peach p-4">
         <p class="text-sm font-bold text-slate-900">Belum ada soal tersimpan.</p>
@@ -282,7 +164,6 @@ function initQuizPage() {
       </div>
     `;
     resetBtn.disabled = true;
-    if (pauseBtn) pauseBtn.disabled = true;
     return;
   }
 
@@ -375,41 +256,19 @@ function initQuizPage() {
     });
   }
 
-  if (pauseBtn) {
-    setPauseButtonIcon(pauseBtn, !timerState.running);
-
-    pauseBtn.addEventListener("click", () => {
-      if (timerState.running) {
-        pauseTimer();
-      } else {
-        resumeTimer();
-      }
-    });
-  }
-
   resetBtn.addEventListener("click", () => {
     state = createState(bank);
-
-    timerState = createTimerState();
     saveState(quizIndex, state);
-    saveTimerState(quizIndex, timerState);
-
     render();
-    updateTimerUI();
-    setPauseButtonIcon(pauseBtn, false);
   });
 
-  updateTimerUI();
-  startTimerLoop();
   render();
 
   window.addEventListener("beforeunload", () => {
     saveState(quizIndex, state);
-    saveTimerState(quizIndex, timerState);
   });
   window.addEventListener("pagehide", () => {
     saveState(quizIndex, state);
-    saveTimerState(quizIndex, timerState);
   });
 }
 
